@@ -43,6 +43,8 @@ export function fmtChainCode(name: string): string {
     scroll: "SCR",
     linea: "LIN",
     unichain: "UNI",
+    mantle: "MNT",
+    plasma: "XPL",
   };
   return map[name] ?? name.slice(0, 4).toUpperCase();
 }

@@ -23,6 +23,8 @@ function explorerUrl(chainId: number, addr: string): string {
     534352: "https://scrollscan.com",
     59144: "https://lineascan.build",
     130: "https://uniscan.xyz",
+    5000: "https://explorer.mantle.xyz",
+    9745: "https://plasmascan.to",
   };
   const base = bases[chainId] ?? "https://etherscan.io";
   return `${base}/address/${addr}`;

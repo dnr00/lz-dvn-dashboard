@@ -95,6 +95,22 @@ CHAINS: dict[str, ChainInfo] = {
         dex_slug="unichain",
         display="Unichain",
     ),
+    "mantle": ChainInfo(
+        lz_name="mantle",
+        chain_id=5000,
+        eid=30181,
+        rpc="https://rpc.mantle.xyz",
+        dex_slug="mantle",
+        display="Mantle",
+    ),
+    "plasma": ChainInfo(
+        lz_name="plasma",
+        chain_id=9745,
+        eid=30383,
+        rpc="https://rpc.plasma.to",
+        dex_slug="plasma",
+        display="Plasma",
+    ),
 }
 
 

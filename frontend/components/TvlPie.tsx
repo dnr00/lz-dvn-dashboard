@@ -15,6 +15,8 @@ const CHAIN_COLORS: Record<string, string> = {
   scroll: "#ffe0b3",
   linea: "#61dfc6",
   unichain: "#ff007a",
+  mantle: "#0b0b0b",
+  plasma: "#d8ff2b",
 };
 
 interface Props {
