@@ -6,8 +6,8 @@ import { fmtChainCode } from "@/lib/format";
 const COLORS: Record<string, string> = {
   vulnerable: "bg-vuln text-bg",
   paused: "bg-warn text-bg",
-  safe: "bg-safe/80 text-bg",
-  unknown: "bg-dim text-muted",
+  safe: "bg-safe text-bg",
+  unknown: "bg-dim text-fg",
   unreachable: "bg-border-strong text-muted",
 };
 

@@ -16,13 +16,13 @@ interface Props {
 }
 
 const COLS: { key: SortKey; label: string; width: string; align?: "left" | "right" }[] = [
-  { key: "symbol", label: "symbol", width: "180px" },
-  { key: "chain_count", label: "chains", width: "260px" },
-  { key: "vulnerable_count", label: "vuln", width: "72px", align: "right" },
-  { key: "paused_count", label: "paused", width: "80px", align: "right" },
-  { key: "total_tvl_usd", label: "tvl", width: "120px", align: "right" },
-  { key: "price_spread_pct", label: "spread", width: "140px" },
-  { key: "arbitrage", label: "arb", width: "260px" },
+  { key: "symbol", label: "symbol", width: "200px" },
+  { key: "chain_count", label: "chains", width: "320px" },
+  { key: "vulnerable_count", label: "vuln", width: "80px", align: "right" },
+  { key: "paused_count", label: "paused", width: "90px", align: "right" },
+  { key: "total_tvl_usd", label: "tvl", width: "140px", align: "right" },
+  { key: "price_spread_pct", label: "spread", width: "180px" },
+  { key: "arbitrage", label: "arb", width: "200px" },
 ];
 
 function SortIcon({

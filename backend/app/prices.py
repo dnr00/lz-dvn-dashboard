@@ -53,6 +53,14 @@ def _best_pool(
     target_addr: str,
     chain_slug: str,
 ) -> tuple[float | None, float | None, str | None]:
+    """Return (price_usd, liquidity_usd, pair_url) for the highest-liquidity
+    pool where `target_addr` is the BASE token.
+
+    DexScreener's `priceUsd` is the price of the pool's base token in USD.
+    Pools where the target is the QUOTE token must be ignored — otherwise
+    the returned price is of the OTHER token (e.g. a WBTC/USDT pool returns
+    WBTC's price, which incorrectly appears as USDT's price).
+    """
     target = target_addr.lower()
     best_price: float | None = None
     best_liq: float | None = None
@@ -61,8 +69,7 @@ def _best_pool(
         if pool.get("chainId", "").lower() != chain_slug.lower():
             continue
         base = (pool.get("baseToken") or {}).get("address", "").lower()
-        quote = (pool.get("quoteToken") or {}).get("address", "").lower()
-        if base != target and quote != target:
+        if base != target:
             continue
         liq = ((pool.get("liquidity") or {}).get("usd")) or 0.0
         if liq < MIN_LIQUIDITY:
