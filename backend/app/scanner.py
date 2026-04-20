@@ -224,7 +224,11 @@ async def scan_chain(
             elif dep.approval_required is False:
                 dep.adapter_type = "native"
 
-        # Round 4: token metadata + balance/total-supply
+        # Round 4: token metadata + balance/total-supply + token paused()
+        # Some OFTs don't implement Pausable on the adapter but DO on the
+        # underlying token (e.g. rsETH). Calling paused() on both catches
+        # either case. For native OFTs (adapter == token) this round 4
+        # paused() call is redundant with round 3 but harmless.
         r4_calls: list[tuple[str, bytes]] = []
         idx_map: list[int] = []
         for i, dep in enumerate(result.deployments):
@@ -238,16 +242,18 @@ async def scan_chain(
                 )
             else:
                 r4_calls.append((dep.token, bytes.fromhex(SEL_TOTAL_SUPPLY)))
-            idx_map.extend([i, i, i])
+            r4_calls.append((dep.token, bytes.fromhex(SEL_PAUSED)))
+            idx_map.extend([i, i, i, i])
 
         if r4_calls:
             r4 = await multicall(session, chain.rpc, r4_calls)
-            for j in range(0, len(r4), 3):
+            for j in range(0, len(r4), 4):
                 i = idx_map[j]
                 dep = result.deployments[i]
                 ok_s, ret_s = r4[j]
                 ok_d, ret_d = r4[j + 1]
                 ok_b, ret_b = r4[j + 2]
+                ok_tp, ret_tp = r4[j + 3]
                 if ok_s and len(ret_s) >= 32:
                     try:
                         dep.token_symbol = decode(["string"], ret_s)[0] or None
@@ -265,6 +271,11 @@ async def scan_chain(
                             dep.balance_human = dep.balance_raw / 10 ** dep.decimals
                     except Exception:
                         pass
+                if ok_tp and len(ret_tp) >= 32 and not dep.paused:
+                    token_paused = _decode_bool(ret_tp)
+                    if token_paused:
+                        dep.paused = True
+                        dep.paused_method = "token.paused()"
 
         result.rpc_ok = True
         result.latency_ms = int((time.time() - t0) * 1000)
