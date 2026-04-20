@@ -62,6 +62,9 @@ def _deployment_to_api(
         liquidity_usd=liq,
         tvl_usd=tvl_usd,
         dex_pair_url=pair_url,
+        peer_eids_active=list(dep.peer_eids_active),
+        peer_eids_probed=list(dep.peer_eids_probed),
+        send_blocked=dep.send_blocked,
     )
 
 
@@ -111,6 +114,7 @@ def _aggregate_rows(
     for symbol, deps in by_symbol.items():
         vulnerable_count = sum(1 for d in deps if d.status == "vulnerable")
         paused_count = sum(1 for d in deps if d.paused)
+        send_blocked_count = sum(1 for d in deps if d.send_blocked)
         priced = [d for d in deps if d.price_usd]
         spread_pct = None
         if len(priced) >= 2:
@@ -127,6 +131,7 @@ def _aggregate_rows(
                 chain_count=len(deps),
                 vulnerable_count=vulnerable_count,
                 paused_count=paused_count,
+                send_blocked_count=send_blocked_count,
                 total_tvl_usd=total_tvl,
                 price_spread_pct=spread_pct,
                 arbitrage=_compute_arbitrage(deps),

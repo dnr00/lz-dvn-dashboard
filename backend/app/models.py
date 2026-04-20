@@ -26,6 +26,9 @@ class ChainDeployment(BaseModel):
     liquidity_usd: float | None = None
     tvl_usd: float | None = None
     dex_pair_url: str | None = None
+    peer_eids_active: list[int] = []  # destination EIDs with non-zero peer
+    peer_eids_probed: list[int] = []  # EIDs the scanner checked
+    send_blocked: bool = False        # all probed peers == 0x0
 
 
 class ArbitrageHint(BaseModel):
@@ -44,6 +47,7 @@ class OftRow(BaseModel):
     chain_count: int
     vulnerable_count: int          # number of chains flagged vulnerable
     paused_count: int
+    send_blocked_count: int = 0    # chains where every peer is 0x0
     total_tvl_usd: float | None = None
     price_spread_pct: float | None = None
     arbitrage: ArbitrageHint | None = None

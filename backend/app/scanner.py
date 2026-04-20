@@ -45,6 +45,12 @@ from scan_oft_dvn import (  # noqa: E402
 
 SEL_PAUSED = function_signature_to_4byte_selector("paused()").hex()
 SEL_DELEGATE = function_signature_to_4byte_selector("delegate()").hex()
+SEL_PEERS = function_signature_to_4byte_selector("peers(uint32)").hex()
+
+
+def _encode_peers(eid: int) -> bytes:
+    # peers(uint32) takes uint32 but ABI-encodes to 32 bytes.
+    return bytes.fromhex(SEL_PEERS) + eid.to_bytes(32, "big")
 
 # Known DVN labels (lowercase address -> label). Extend as needed.
 KNOWN_DVNS: dict[str, str] = {
@@ -81,6 +87,9 @@ class OftDeployment:
     adapter_type: str = "unknown"     # native | lockbox | unknown
     paused: bool = False
     paused_method: str | None = None
+    peer_eids_active: list[int] = field(default_factory=list)  # EIDs with peer != 0x0
+    peer_eids_probed: list[int] = field(default_factory=list)  # EIDs we checked
+    send_blocked: bool = False        # all probed peers == 0x0
 
 
 @dataclass
@@ -276,6 +285,46 @@ async def scan_chain(
                     if token_paused:
                         dep.paused = True
                         dep.paused_method = "token.paused()"
+
+        # Round 5: peers(eid) for each (adapter, other_chain_eid).
+        # Detects the Puffer-style deprecation pattern where the operator
+        # sets peer(dst)=0x0 on every destination, effectively killing
+        # send() (it reverts with NoPeer). An adapter with NO active peers
+        # is effectively "send_blocked" even though the contract still
+        # responds to getConfig.
+        other_eids = [c.eid for c in CHAINS.values() if c.eid != chain.eid]
+        for dep in result.deployments:
+            dep.peer_eids_probed = list(other_eids)
+
+        r5_calls: list[tuple[str, bytes]] = []
+        r5_meta: list[tuple[int, int]] = []  # (deployment_index, eid)
+        for i, oapp in enumerate(oapps):
+            for eid in other_eids:
+                r5_calls.append((oapp, _encode_peers(eid)))
+                r5_meta.append((i, eid))
+
+        if r5_calls:
+            r5 = await multicall(session, chain.rpc, r5_calls)
+            for (i, eid), (ok, ret) in zip(r5_meta, r5, strict=False):
+                if not ok or len(ret) < 32:
+                    continue
+                # peers(uint32) returns bytes32 (address in low 20 bytes)
+                try:
+                    peer = int.from_bytes(ret[-32:], "big")
+                except Exception:
+                    continue
+                if peer != 0:
+                    result.deployments[i].peer_eids_active.append(eid)
+
+            for dep in result.deployments:
+                # Only flag send_blocked when the contract itself responds
+                # (status != unreachable) but every probed peer is zero.
+                if (
+                    dep.peer_eids_probed
+                    and not dep.peer_eids_active
+                    and dep.status != "unreachable"
+                ):
+                    dep.send_blocked = True
 
         result.rpc_ok = True
         result.latency_ms = int((time.time() - t0) * 1000)

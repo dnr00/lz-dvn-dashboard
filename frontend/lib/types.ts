@@ -25,6 +25,9 @@ export interface ChainDeployment {
   liquidity_usd: number | null;
   tvl_usd: number | null;
   dex_pair_url: string | null;
+  peer_eids_active: number[];
+  peer_eids_probed: number[];
+  send_blocked: boolean;
 }
 
 export interface ArbitrageHint {
@@ -43,6 +46,7 @@ export interface OftRow {
   chain_count: number;
   vulnerable_count: number;
   paused_count: number;
+  send_blocked_count: number;
   total_tvl_usd: number | null;
   price_spread_pct: number | null;
   arbitrage: ArbitrageHint | null;

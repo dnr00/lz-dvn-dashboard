@@ -8,6 +8,11 @@ const ITEMS: { cls: string; label: string; note?: string }[] = [
     label: "paused",
     note: "adapter or token paused()",
   },
+  {
+    cls: "bg-safe text-bg ring-2 ring-info opacity-70",
+    label: "send-blocked",
+    note: "all peers 0x0 (deprecated)",
+  },
   { cls: "bg-dim text-fg", label: "unknown", note: "getConfig failed" },
   {
     cls: "bg-border-strong text-muted",
