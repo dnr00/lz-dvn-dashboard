@@ -8,6 +8,7 @@ import { sortRows, type SortDir, type SortKey } from "@/lib/sort";
 import { Header } from "./Header";
 import { StatusBar } from "./StatusBar";
 import { FilterBar, type ViewMode } from "./FilterBar";
+import { Legend } from "./Legend";
 import { OftTable } from "./OftTable";
 import { DetailPanel } from "./DetailPanel";
 import { EmptyState } from "./EmptyState";
@@ -49,12 +50,26 @@ export function Dashboard({ initialData }: { initialData: ScanResponse }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const [mode, setMode] = useState<ViewMode>("vulnerable");
+  const [mode, setModeRaw] = useState<ViewMode>("vulnerable");
   const [selectedChains, setSelectedChains] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("vulnerable_count");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [active, setActive] = useState<OftRow | null>(null);
+
+  const setMode = useCallback((m: ViewMode) => {
+    setModeRaw(m);
+    if (m === "arbitrage") {
+      setSortKey("price_spread_pct");
+      setSortDir("desc");
+    } else if (m === "paused") {
+      setSortKey("paused_count");
+      setSortDir("desc");
+    } else if (m === "vulnerable") {
+      setSortKey("vulnerable_count");
+      setSortDir("desc");
+    }
+  }, []);
 
   const toggleChain = useCallback((c: string) => {
     setSelectedChains((prev) => {
@@ -145,6 +160,7 @@ export function Dashboard({ initialData }: { initialData: ScanResponse }) {
         query={query}
         setQuery={setQuery}
       />
+      <Legend />
 
       <main className="flex-1 mx-auto max-w-[1440px] w-full px-6 md:px-10 py-8">
         <AnimatePresence>

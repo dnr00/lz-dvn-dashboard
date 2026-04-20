@@ -5,6 +5,7 @@ import type { SortDir, SortKey } from "@/lib/sort";
 import { fmtPct, fmtUsd } from "@/lib/format";
 import { ChainGrid } from "./ChainGrid";
 import { SpreadBar } from "./SpreadBar";
+import { TvlPie } from "./TvlPie";
 
 interface Props {
   rows: OftRow[];
@@ -141,7 +142,14 @@ export function OftTable({ rows, sortKey, sortDir, onSort, onOpen, activeSymbol 
                   </td>
                   <td className="py-3 px-3 align-top text-right tabular-nums">
                     {row.total_tvl_usd != null ? (
-                      <span className="text-fg font-medium">{fmtUsd(row.total_tvl_usd)}</span>
+                      <TvlPie
+                        deployments={row.deployments}
+                        total={row.total_tvl_usd}
+                      >
+                        <span className="text-fg font-medium border-b border-dashed border-border cursor-help">
+                          {fmtUsd(row.total_tvl_usd)}
+                        </span>
+                      </TvlPie>
                     ) : (
                       <span className="text-dim">—</span>
                     )}
