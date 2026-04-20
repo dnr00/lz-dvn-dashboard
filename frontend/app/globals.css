@@ -152,11 +152,13 @@ body {
   background: var(--accent);
 }
 
-/* row slider accent */
-.row-accent {
+/* row slider accent — apply inside first td so <tr> does not become a
+   positioned ancestor (which breaks table-layout:fixed column widths
+   for the remaining tds in WebKit). */
+.row-accent > td:first-child {
   position: relative;
 }
-.row-accent::before {
+.row-accent > td:first-child::before {
   content: "";
   position: absolute;
   left: 0;
@@ -166,8 +168,8 @@ body {
   background: var(--accent);
   transition: width 0.15s ease;
 }
-.row-accent:hover::before,
-.row-accent[data-active="true"]::before {
+.row-accent:hover > td:first-child::before,
+.row-accent[data-active="true"] > td:first-child::before {
   width: 3px;
 }
 
