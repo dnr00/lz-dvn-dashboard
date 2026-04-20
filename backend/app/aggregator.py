@@ -22,6 +22,12 @@ from .registry import (
     registry_symbol_names,
 )
 from .scanner import ChainScanResult, OftDeployment, scan_all
+from .transfer_api import (
+    TransferToken,
+    fetch_transfer_tokens,
+    group_by_chain,
+    price_index,
+)
 
 ARBITRAGE_MIN_SPREAD_PCT = 0.5
 ARBITRAGE_MIN_LIQUIDITY_USD = 50_000.0
@@ -30,10 +36,25 @@ ARBITRAGE_MIN_LIQUIDITY_USD = 50_000.0
 def _deployment_to_api(
     dep: OftDeployment,
     quote: TokenQuote | None,
+    transfer_prices: dict[tuple[str, str], float],
 ) -> ChainDeployment:
-    price = quote.price_usd if quote else None
-    liq = quote.liquidity_usd if quote else None
-    pair_url = quote.pair_url if quote else None
+    price: float | None = None
+    price_source: str | None = None
+    liq = None
+    pair_url = None
+    if quote and quote.price_usd is not None:
+        price = quote.price_usd
+        price_source = "dexscreener"
+        liq = quote.liquidity_usd
+        pair_url = quote.pair_url
+    elif dep.token:
+        # DexScreener miss — fall back to Stargate Transfer API's flat
+        # price. Flag the source so arbitrage logic knows to skip it
+        # (those prices are identical across chains).
+        t_price = transfer_prices.get((dep.chain_name, dep.token.lower()))
+        if t_price is not None:
+            price = t_price
+            price_source = "transfer-api"
     tvl_usd = None
     if price is not None and dep.balance_human is not None:
         tvl_usd = price * dep.balance_human
@@ -59,6 +80,7 @@ def _deployment_to_api(
         balance_human=dep.balance_human,
         decimals=dep.decimals,
         price_usd=price,
+        price_source=price_source,
         liquidity_usd=liq,
         tvl_usd=tvl_usd,
         dex_pair_url=pair_url,
@@ -69,7 +91,14 @@ def _deployment_to_api(
 
 
 def _compute_arbitrage(deployments: list[ChainDeployment]) -> ArbitrageHint | None:
-    priced = [d for d in deployments if d.price_usd and d.liquidity_usd]
+    # Only DexScreener prices carry per-pool liquidity AND per-chain
+    # variation; the Transfer API fallback returns a single flat price
+    # per symbol so it can't be used for cross-chain spread.
+    priced = [
+        d
+        for d in deployments
+        if d.price_usd and d.liquidity_usd and d.price_source == "dexscreener"
+    ]
     if len(priced) < 2:
         return None
     cheap = min(priced, key=lambda d: d.price_usd or 0)
@@ -98,6 +127,7 @@ def _aggregate_rows(
     scan_results: list[ChainScanResult],
     quotes: dict[tuple[str, str], TokenQuote],
     names: dict[str, str],
+    transfer_prices: dict[tuple[str, str], float],
 ) -> list[OftRow]:
     by_symbol: dict[str, list[ChainDeployment]] = defaultdict(list)
     for chain in scan_results:
@@ -108,17 +138,21 @@ def _aggregate_rows(
             quote = None
             if dep.token:
                 quote = quotes.get((chain_info.dex_slug, dep.token.lower()))
-            by_symbol[dep.symbol].append(_deployment_to_api(dep, quote))
+            by_symbol[dep.symbol].append(
+                _deployment_to_api(dep, quote, transfer_prices)
+            )
 
     rows: list[OftRow] = []
     for symbol, deps in by_symbol.items():
         vulnerable_count = sum(1 for d in deps if d.status == "vulnerable")
         paused_count = sum(1 for d in deps if d.paused)
         send_blocked_count = sum(1 for d in deps if d.send_blocked)
-        priced = [d for d in deps if d.price_usd]
+        priced_for_spread = [
+            d for d in deps if d.price_usd and d.price_source == "dexscreener"
+        ]
         spread_pct = None
-        if len(priced) >= 2:
-            prices = [d.price_usd for d in priced if d.price_usd]
+        if len(priced_for_spread) >= 2:
+            prices = [d.price_usd for d in priced_for_spread if d.price_usd]
             lo, hi = min(prices), max(prices)
             if lo > 0:
                 spread_pct = round((hi - lo) / lo * 100, 4)
@@ -148,6 +182,24 @@ async def run_full_scan(session: aiohttp.ClientSession) -> ScanResponse:
     by_chain = build_deployments_by_chain(registry)
     names = registry_symbol_names(registry)
 
+    # Supplementary registry: Stargate Transfer API tokens. Used to
+    # backfill chains the experimental OFT list hasn't been updated for
+    # (Plasma at the time of writing). Existing chain entries from the
+    # metadata registry take priority — we only add tokens for chains
+    # that the metadata registry returns empty for.
+    transfer_tokens = await fetch_transfer_tokens(session)
+    transfer_by_chain = group_by_chain(transfer_tokens)
+    for chain_name, entries in transfer_by_chain.items():
+        if chain_name not in CHAINS:
+            continue
+        existing = by_chain.get(chain_name) or []
+        if existing:
+            continue
+        by_chain[chain_name] = entries
+        for sym, _ in entries:
+            names.setdefault(sym, sym)
+    transfer_prices = price_index(transfer_tokens)
+
     scan_results = await scan_all(session, by_chain)
 
     # collect targets for DexScreener
@@ -164,7 +216,7 @@ async def run_full_scan(session: aiohttp.ClientSession) -> ScanResponse:
     dex_hits = sum(1 for q in quotes.values() if q.price_usd is not None)
     dex_misses = len(quotes) - dex_hits
 
-    rows = _aggregate_rows(scan_results, quotes, names)
+    rows = _aggregate_rows(scan_results, quotes, names, transfer_prices)
 
     chain_health: list[ChainHealth] = []
     for chain in scan_results:

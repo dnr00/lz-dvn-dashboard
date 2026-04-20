@@ -22,6 +22,7 @@ export interface ChainDeployment {
   balance_human: number | null;
   decimals: number | null;
   price_usd: number | null;
+  price_source: "dexscreener" | "transfer-api" | null;
   liquidity_usd: number | null;
   tvl_usd: number | null;
   dex_pair_url: string | null;

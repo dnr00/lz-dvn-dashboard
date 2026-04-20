@@ -23,6 +23,7 @@ class ChainDeployment(BaseModel):
     balance_human: float | None = None
     decimals: int | None = None
     price_usd: float | None = None
+    price_source: str | None = None   # "dexscreener" | "transfer-api"
     liquidity_usd: float | None = None
     tvl_usd: float | None = None
     dex_pair_url: str | None = None

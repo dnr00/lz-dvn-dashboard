@@ -3,6 +3,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# LayerZero V2 EndpointV2 is deployed at this address on almost every chain.
+# Plasma (and a handful of other non-EVM-compatible deployments) use a
+# different address — see chain overrides below.
+DEFAULT_ENDPOINT_V2 = "0x1a44076050125825900e736c501f859c50fE728c"
+
 
 @dataclass(frozen=True)
 class ChainInfo:
@@ -12,6 +17,7 @@ class ChainInfo:
     rpc: str
     dex_slug: str         # DexScreener chain slug
     display: str          # UI label
+    endpoint: str = DEFAULT_ENDPOINT_V2
 
 
 CHAINS: dict[str, ChainInfo] = {
@@ -110,6 +116,7 @@ CHAINS: dict[str, ChainInfo] = {
         rpc="https://rpc.plasma.to",
         dex_slug="plasma",
         display="Plasma",
+        endpoint="0x6F475642a6e85809B1c36Fa62763669b1b48DD5B",
     ),
 }
 

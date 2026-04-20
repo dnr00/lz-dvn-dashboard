@@ -28,7 +28,6 @@ if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
 
 from scan_oft_dvn import (  # noqa: E402
-    ENDPOINT_V2,
     SEL_APPROVAL_REQUIRED,
     SEL_BALANCE_OF,
     SEL_DECIMALS,
@@ -151,7 +150,7 @@ async def scan_chain(
         r1_meta: list[tuple[int, int]] = []  # (deployment_index, eid)
         for i, oapp in enumerate(oapps):
             for eid in probe_eids:
-                r1_calls.append((ENDPOINT_V2, encode_get_recv_lib(oapp, eid)))
+                r1_calls.append((chain.endpoint, encode_get_recv_lib(oapp, eid)))
                 r1_meta.append((i, eid))
 
         r1 = await multicall(session, chain.rpc, r1_calls)
@@ -169,7 +168,7 @@ async def scan_chain(
                 continue
             if int(lib, 16) == 0:
                 continue
-            r2_calls.append((ENDPOINT_V2, encode_get_config(oapps[i], lib, eid, 2)))
+            r2_calls.append((chain.endpoint, encode_get_config(oapps[i], lib, eid, 2)))
             r2_meta.append((i, eid))
 
         r2 = await multicall(session, chain.rpc, r2_calls)
