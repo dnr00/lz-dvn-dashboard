@@ -212,8 +212,6 @@ async def scan_chain(
                 if is_paused:
                     dep.paused = True
                     dep.paused_method = "paused()"
-                    # paused wins over vulnerable/safe for status display
-                    dep.status = "paused"
             if ok_t and len(ret_t) >= 32:
                 try:
                     dep.token = to_checksum_address(decode(["address"], ret_t)[0])

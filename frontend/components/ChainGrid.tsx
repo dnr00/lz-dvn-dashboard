@@ -13,26 +13,30 @@ const COLORS: Record<string, string> = {
 
 export function ChainGrid({ deployments }: { deployments: ChainDeployment[] }) {
   const sorted = [...deployments].sort((a, b) => {
-    const order: Record<string, number> = {
-      vulnerable: 0,
-      paused: 1,
-      unreachable: 2,
-      unknown: 3,
-      safe: 4,
+    const score = (d: ChainDeployment) => {
+      const s = d.status;
+      if (s === "vulnerable") return 0;
+      if (d.paused) return 1;
+      if (s === "unreachable") return 2;
+      if (s === "unknown") return 3;
+      return 4;
     };
-    return (order[a.status] ?? 9) - (order[b.status] ?? 9);
+    return score(a) - score(b);
   });
   return (
     <div className="flex flex-wrap gap-1">
       {sorted.map((d) => {
         const cls = COLORS[d.status] ?? COLORS.unknown;
+        const pausedRing = d.paused ? "ring-2 ring-warn ring-offset-0" : "";
+        const title = `${d.chain_display} · ${d.status.toUpperCase()}${d.paused ? " · PAUSED" : ""}`;
         return (
           <span
             key={d.chain}
-            className={`${cls} text-[9px] uppercase tracking-[0.16em] px-1.5 py-0.5 leading-none`}
-            title={`${d.chain_display} · ${d.status.toUpperCase()}`}
+            className={`${cls} ${pausedRing} text-[10px] font-semibold uppercase tracking-[0.14em] px-1.5 py-0.5 leading-none inline-flex items-center gap-0.5`}
+            title={title}
           >
             {fmtChainCode(d.chain)}
+            {d.paused && <span aria-hidden className="text-[9px] leading-none">⏸</span>}
           </span>
         );
       })}
